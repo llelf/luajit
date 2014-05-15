@@ -5,6 +5,7 @@
 
 #define lj_profile_c
 #define LUA_CORE
+#define _GNU_SOURCE 1
 
 #include "lj_obj.h"
 
@@ -28,6 +29,17 @@
 #include <signal.h>
 #define profile_lock(ps)	UNUSED(ps)
 #define profile_unlock(ps)	UNUSED(ps)
+
+#if 1
+#include <linux/perf_event.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+
+#include <sys/prctl.h>
+#endif
+
 
 #elif LJ_PROFILE_PTHREAD
 
@@ -176,20 +188,79 @@ static void profile_signal(int sig)
   profile_trigger(&profile_state);
 }
 
+
+static int perf_event_open(struct perf_event_attr *attr,
+			   pid_t pid, int cpu, int group_fd,
+			   unsigned long flags)
+{
+  return syscall(SYS_perf_event_open, attr, pid, cpu, group_fd, flags);
+}
+
+
+static void register_prof_events()
+{
+  struct perf_event_attr attr = { };
+
+  memset(&attr, 0, sizeof(struct perf_event_attr));
+
+  attr.type = PERF_TYPE_SOFTWARE;
+  attr.size = sizeof(struct perf_event_attr);
+  attr.config = PERF_COUNT_SW_CPU_CLOCK;
+  attr.sample_type = PERF_SAMPLE_IP;
+  attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+  attr.disabled=1;
+  attr.pinned=1;
+  attr.exclude_kernel=1;
+  attr.exclude_hv=1;
+  attr.freq = 1;
+  attr.sample_freq = 1000;
+  /* attr.watermark=0; */
+  /* attr.wakeup_events=1; */
+  
+  int fd = perf_event_open(&attr, 0, -1, -1, 0);
+  if (fd == -1)
+    {
+      printf ("! perf_event_open %m\n");
+    }
+
+  fcntl(fd, F_SETFL, O_RDWR|O_NONBLOCK|O_ASYNC);
+  fcntl(fd, F_SETSIG, SIGPROF);
+  fcntl(fd, F_SETOWN, getpid());
+
+  ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+
+  int err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+  if (err != 0)
+    printf ("! perf_events enable\n");
+
+
+
+}
+
+
+
 /* Start profiling timer. */
 static void profile_timer_start(ProfileState *ps)
 {
+#if 0
   int interval = ps->interval;
   struct itimerval tm;
-  struct sigaction sa;
   tm.it_value.tv_sec = tm.it_interval.tv_sec = interval / 1000;
   tm.it_value.tv_usec = tm.it_interval.tv_usec = (interval % 1000) * 1000;
   setitimer(ITIMER_PROF, &tm, NULL);
+#else
+  register_prof_events();
+#endif
+
+  struct sigaction sa;
+
   sa.sa_flags = SA_RESTART;
   sa.sa_handler = profile_signal;
   sigemptyset(&sa.sa_mask);
   sigaction(SIGPROF, &sa, &ps->oldsa);
 }
+
+
 
 /* Stop profiling timer. */
 static void profile_timer_stop(ProfileState *ps)
