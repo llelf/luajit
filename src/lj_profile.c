@@ -75,6 +75,7 @@ typedef struct ProfileState {
   int interval;			/* Sample interval in milliseconds. */
   int samples;			/* Number of samples for next callback. */
   char *flavour;		/* What generates profiling events. */
+  int perf_event_fd;		/* Performace event file descriptor */
   int vmstate;			/* VM state when profile timer triggered. */
 #if LJ_PROFILE_SIGPROF
   struct sigaction oldsa;	/* Previous SIGPROF state. */
@@ -198,7 +199,7 @@ static int perf_event_open(struct perf_event_attr *attr,
 }
 
 
-static void register_prof_events(const ProfileState *ps)
+static void register_prof_events(ProfileState *ps)
 {
   struct perf_event_attr attr = { };
 
@@ -231,6 +232,8 @@ static void register_prof_events(const ProfileState *ps)
     {
       printf ("! perf_event_open %m\n");
     }
+
+  ps->perf_event_fd = fd;
 
   fcntl(fd, F_SETFL, O_RDWR|O_NONBLOCK|O_ASYNC);
   fcntl(fd, F_SETSIG, SIGPROF);
@@ -277,11 +280,18 @@ static void profile_timer_start(ProfileState *ps)
 /* Stop profiling timer. */
 static void profile_timer_stop(ProfileState *ps)
 {
-  struct itimerval tm;
-  tm.it_value.tv_sec = tm.it_interval.tv_sec = 0;
-  tm.it_value.tv_usec = tm.it_interval.tv_usec = 0;
-  setitimer(ITIMER_PROF, &tm, NULL);
-  sigaction(SIGPROF, &ps->oldsa, NULL);
+  if (ps->perf_event_fd)
+    {
+      ioctl(ps->perf_event_fd, PERF_EVENT_IOC_DISABLE, 0);
+    }
+  else
+    {
+      struct itimerval tm;
+      tm.it_value.tv_sec = tm.it_interval.tv_sec = 0;
+      tm.it_value.tv_usec = tm.it_interval.tv_usec = 0;
+      setitimer(ITIMER_PROF, &tm, NULL);
+      sigaction(SIGPROF, &ps->oldsa, NULL);
+    }
 }
 
 #elif LJ_PROFILE_PTHREAD
