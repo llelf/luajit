@@ -242,6 +242,8 @@ end
 
 -- Start profiling.
 local function prof_start(mode)
+  out:write('prof_start\n');
+
   local interval = ""
   mode = mode:gsub("i%d*", function(s) interval = s; return "" end)
   prof_min = 3
