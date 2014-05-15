@@ -31,12 +31,12 @@
 #define profile_unlock(ps)	UNUSED(ps)
 
 #if 1
-#include <linux/perf_event.h>
+#include <stdio.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/ioctl.h>
-#include <fcntl.h>
-
+#include <linux/perf_event.h>
 #include <sys/prctl.h>
 #endif
 
@@ -74,7 +74,7 @@ typedef struct ProfileState {
   SBuf sb;			/* String buffer for stack dumps. */
   int interval;			/* Sample interval in milliseconds. */
   int samples;			/* Number of samples for next callback. */
-  int flavour;			/* What generates profiling events. */
+  char *flavour;		/* What generates profiling events. */
   int vmstate;			/* VM state when profile timer triggered. */
 #if LJ_PROFILE_SIGPROF
   struct sigaction oldsa;	/* Previous SIGPROF state. */
@@ -198,15 +198,23 @@ static int perf_event_open(struct perf_event_attr *attr,
 }
 
 
-static void register_prof_events()
+static void register_prof_events(const ProfileState *ps)
 {
   struct perf_event_attr attr = { };
 
   memset(&attr, 0, sizeof(struct perf_event_attr));
 
-  attr.type = PERF_TYPE_SOFTWARE;
+  if (strcmp(ps->flavour, "sw-cpu-clock") == 0)
+    {
+      attr.type = PERF_TYPE_SOFTWARE;
+      attr.config = PERF_COUNT_SW_CPU_CLOCK;
+    }
+  else
+    {
+      fprintf (stderr, "unknown profiling flavour `%s'\n", ps->flavour);
+    }
+
   attr.size = sizeof(struct perf_event_attr);
-  attr.config = PERF_COUNT_SW_CPU_CLOCK;
   attr.sample_type = PERF_SAMPLE_IP;
   attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
   attr.disabled=1;
@@ -243,7 +251,7 @@ static void register_prof_events()
 /* Start profiling timer. */
 static void profile_timer_start(ProfileState *ps)
 {
-  if (ps->flavour == 0)
+  if (strcmp(ps->flavour, "vanilla") == 0)
     {
       int interval = ps->interval;
       struct itimerval tm;
@@ -253,7 +261,7 @@ static void profile_timer_start(ProfileState *ps)
     }
   else
     {
-      register_prof_events();
+      register_prof_events(ps);
     }
 
   struct sigaction sa;
@@ -375,6 +383,8 @@ LUA_API void luaJIT_profile_start(lua_State *L, const char *mode,
 {
   ProfileState *ps = &profile_state;
   int interval = LJ_PROFILE_INTERVAL_DEFAULT;
+  char *flavour;
+
   while (*mode) {
     int m = *mode++;
     switch (m) {
@@ -390,6 +400,13 @@ LUA_API void luaJIT_profile_start(lua_State *L, const char *mode,
       lj_trace_flushall(L);
       break;
 #endif
+    case 'S':
+      {
+	int k;
+	if (sscanf (mode, "[%m[^]]]%n", &flavour, &k) > 0)
+	  mode += k;
+      }
+
     default:  /* Ignore unknown mode chars. */
       break;
     }
@@ -403,6 +420,7 @@ LUA_API void luaJIT_profile_start(lua_State *L, const char *mode,
   ps->cb = cb;
   ps->data = data;
   ps->samples = 0;
+  ps->flavour = flavour;
   lj_buf_init(L, &ps->sb);
   profile_timer_start(ps);
 }

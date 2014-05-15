@@ -242,14 +242,15 @@ end
 
 -- Start profiling.
 local function prof_start(mode)
-  out:write('prof_start\n');
-
   local interval = ""
-  mode = mode:gsub("i%d*", function(s) interval = s; return "" end)
+  mode = mode:gsub("i%d+", function(s) interval = s; return "" end)
   prof_min = 3
   mode = mode:gsub("m(%d+)", function(s) prof_min = tonumber(s); return "" end)
   prof_depth = 1
   mode = mode:gsub("%-?%d+", function(s) prof_depth = tonumber(s); return "" end)
+  flavour = "S[vanilla]"
+  mode = mode:gsub("S%[.+%]", function(s) flavour = s; return "" end)
+
   local m = {}
   for c in mode:gmatch(".") do m[c] = c end
   prof_states = m.z or m.v
@@ -287,7 +288,7 @@ local function prof_start(mode)
   prof_count1 = {}
   prof_count2 = {}
   prof_samples = 0
-  profile.start(scope:lower()..interval, prof_cb)
+  profile.start(scope:lower()..interval..flavour, prof_cb)
   prof_ud = newproxy(true)
   getmetatable(prof_ud).__gc = prof_finish
 end
