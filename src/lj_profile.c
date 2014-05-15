@@ -254,6 +254,14 @@ static void register_prof_events(ProfileState *ps)
 /* Start profiling timer. */
 static void profile_timer_start(ProfileState *ps)
 {
+  struct sigaction sa = {
+    .sa_flags = SA_RESTART,
+    .sa_handler = profile_signal
+  };
+
+  sigemptyset(&sa.sa_mask);
+  sigaction(SIGPROF, &sa, &ps->oldsa);
+
   if (strcmp(ps->flavour, "vanilla") == 0)
     {
       int interval = ps->interval;
@@ -266,13 +274,6 @@ static void profile_timer_start(ProfileState *ps)
     {
       register_prof_events(ps);
     }
-
-  struct sigaction sa;
-
-  sa.sa_flags = SA_RESTART;
-  sa.sa_handler = profile_signal;
-  sigemptyset(&sa.sa_mask);
-  sigaction(SIGPROF, &sa, &ps->oldsa);
 }
 
 
