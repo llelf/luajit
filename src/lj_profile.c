@@ -74,6 +74,7 @@ typedef struct ProfileState {
   SBuf sb;			/* String buffer for stack dumps. */
   int interval;			/* Sample interval in milliseconds. */
   int samples;			/* Number of samples for next callback. */
+  int flavour;			/* What generates profiling events. */
   int vmstate;			/* VM state when profile timer triggered. */
 #if LJ_PROFILE_SIGPROF
   struct sigaction oldsa;	/* Previous SIGPROF state. */
@@ -242,15 +243,18 @@ static void register_prof_events()
 /* Start profiling timer. */
 static void profile_timer_start(ProfileState *ps)
 {
-#if 0
-  int interval = ps->interval;
-  struct itimerval tm;
-  tm.it_value.tv_sec = tm.it_interval.tv_sec = interval / 1000;
-  tm.it_value.tv_usec = tm.it_interval.tv_usec = (interval % 1000) * 1000;
-  setitimer(ITIMER_PROF, &tm, NULL);
-#else
-  register_prof_events();
-#endif
+  if (ps->flavour == 0)
+    {
+      int interval = ps->interval;
+      struct itimerval tm;
+      tm.it_value.tv_sec = tm.it_interval.tv_sec = interval / 1000;
+      tm.it_value.tv_usec = tm.it_interval.tv_usec = (interval % 1000) * 1000;
+      setitimer(ITIMER_PROF, &tm, NULL);
+    }
+  else
+    {
+      register_prof_events();
+    }
 
   struct sigaction sa;
 
