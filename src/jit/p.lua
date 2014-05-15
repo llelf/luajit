@@ -36,6 +36,7 @@
 --   G  Produce raw output suitable for graphical tools (e.g. flame graphs).
 --   m<number> Minimum sample percentage to be shown. Default: 3.
 --   i<number> Sampling interval in milliseconds. Default: 10.
+--   S[<string>] Events source if performace events are enabled
 --
 ----------------------------------------------------------------------------
 
