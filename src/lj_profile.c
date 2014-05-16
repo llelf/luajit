@@ -289,7 +289,7 @@ static void register_prof_events(ProfileState *ps)
 
   attr.size = sizeof(struct perf_event_attr);
   attr.sample_type = PERF_SAMPLE_IP;
-  attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+  /* attr.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID; */
   attr.disabled=1;
   attr.pinned=1;
   attr.exclude_kernel=1;
