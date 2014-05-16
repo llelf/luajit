@@ -295,8 +295,7 @@ static void register_prof_events(ProfileState *ps)
   attr.exclude_kernel=1;
   attr.exclude_hv=1;
 
-  attr.freq = 1;
-  attr.sample_freq = ps->interval;
+  attr.sample_period = ps->interval;
   /* attr.watermark=0; */
   /* attr.wakeup_events=1; */
   
