@@ -294,8 +294,9 @@ static void register_prof_events(ProfileState *ps)
   attr.pinned=1;
   attr.exclude_kernel=1;
   attr.exclude_hv=1;
+
   attr.freq = 1;
-  attr.sample_freq = 1000;
+  attr.sample_freq = ps->interval;
   /* attr.watermark=0; */
   /* attr.wakeup_events=1; */
   
