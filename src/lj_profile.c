@@ -213,6 +213,12 @@ static void register_prof_events(ProfileState *ps)
 	{ "sw-context-switches",
 	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CONTEXT_SWITCHES },
 
+	{ "sw-page-faults",
+	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS },
+
+	{ "sw-minor-page-faults",
+	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MIN },
+
 	{ "sw-major-page-faults",
 	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MAJ },
 
