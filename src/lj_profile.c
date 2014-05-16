@@ -201,16 +201,68 @@ static int perf_event_open(struct perf_event_attr *attr,
 
 static void register_prof_events(ProfileState *ps)
 {
+  struct flavour_t {
+    char *name; uint32_t type; uint64_t config;
+  };
+
+  static struct flavour_t flavours[] =
+      {
+	{ "sw-cpu-clock",
+	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_CLOCK },
+
+	{ "branch-instructions",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS },
+
+	{ "cpu-cycles",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES },
+
+	{ "instructions",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS },
+
+	{ "cache-references",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES },
+
+	{ "cache-misses",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES },
+
+	{ "branch-instructions",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS },
+
+	{ "branch-misses",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES },
+
+	{ "bus-cycles",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_BUS_CYCLES },
+
+	{ "stalled-cycles-frontend",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_FRONTEND },
+
+	{ "stalled-cycles-backend",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_BACKEND },
+
+	{ "cpu-cycles",
+	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_REF_CPU_CYCLES },
+
+	{ 0, 0, 0 }
+  };
+
+
   struct perf_event_attr attr = { };
 
   memset(&attr, 0, sizeof(struct perf_event_attr));
 
-  if (strcmp(ps->flavour, "sw-cpu-clock") == 0)
+  const struct flavour_t *f;
+  for (f = flavours; f->name != 0; f++)
     {
-      attr.type = PERF_TYPE_SOFTWARE;
-      attr.config = PERF_COUNT_SW_CPU_CLOCK;
+      if (strcmp (ps->flavour, f->name) == 0)
+	{
+	  attr.type = f->type;
+	  attr.config = f->config;
+	  break;
+	}
     }
-  else
+
+  if (! f->name)
     {
       fprintf (stderr, "unknown profiling flavour `%s'\n", ps->flavour);
     }
@@ -244,9 +296,6 @@ static void register_prof_events(ProfileState *ps)
   int err = ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
   if (err != 0)
     printf ("! perf_events enable\n");
-
-
-
 }
 
 
