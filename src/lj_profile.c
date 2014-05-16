@@ -274,9 +274,17 @@ static void register_prof_events(ProfileState *ps)
 	}
     }
 
-  if (! f->name)
+  if (strcmp (ps->flavour, "?") == 0)
     {
-      fprintf (stderr, "unknown profiling flavour `%s'\n", ps->flavour);
+      const struct flavour_t *f;
+      fprintf (stderr, "I know: ");
+      for (f = flavours; f->name != 0; f++)
+	fprintf (stderr, "%s ", f->name);
+      fprintf(stderr, "\n");
+    }
+  else if (! f->name)
+    {
+      fprintf (stderr, "unknown profiling flavour `%s', S[?] to list\n", ps->flavour);
     }
 
   attr.size = sizeof(struct perf_event_attr);
