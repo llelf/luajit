@@ -210,6 +210,12 @@ static void register_prof_events(ProfileState *ps)
 	{ "sw-cpu-clock",
 	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_CLOCK },
 
+	{ "sw-context-switches",
+	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CONTEXT_SWITCHES },
+
+	{ "sw-major-page-faults",
+	  PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MAJ },
+
 	{ "branch-instructions",
 	  PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS },
 
