@@ -249,7 +249,7 @@ local function prof_start(mode)
   mode = mode:gsub("m(%d+)", function(s) prof_min = tonumber(s); return "" end)
   prof_depth = 1
   mode = mode:gsub("%-?%d+", function(s) prof_depth = tonumber(s); return "" end)
-  flavour = "S[vanilla]"
+  local flavour = "S[vanilla]"
   mode = mode:gsub("S%[.+%]", function(s) flavour = s; return "" end)
 
   local m = {}
