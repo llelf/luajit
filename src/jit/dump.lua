@@ -75,8 +75,9 @@ local bcline, disass
 -- Active flag, output file handle and dump mode.
 local active, out, dumpmode
 
--- The zone we are interested in and zone module
-local zone, libzone
+-- The zone we are interested in
+local zone
+local libzone = require('jit.zone')
 
 ------------------------------------------------------------------------------
 
@@ -564,8 +565,8 @@ local function dump_trace(what, tr, func, pc, otr, oex)
   if what == "start" then
     if dumpmode.H then out:write('<pre class="ljdump">\n') end
     out:write("---- TRACE ", tr, " ", what)
+    if libzone:get() then out:write(" zone=", libzone:get()) end
     if otr then out:write(" ", otr, "/", oex) end
-    if zone then out:write(" zone=", libzone:get()) end
     out:write(" ", fmtfunc(func, pc), "\n")
   elseif what == "stop" or what == "abort" then
     out:write("---- TRACE ", tr, " ", what)
@@ -667,9 +668,6 @@ local function dumpon(opt, outfile)
 
   if opt then
     opt = gsub(opt, ':(%w+)', function(z) zone = z; return "" end)
-    if zone then
-      libzone = require('jit.zone')
-    end
   end
 
   local colormode = os.getenv("COLORTERM") and "A" or "T"
