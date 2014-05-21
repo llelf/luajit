@@ -75,6 +75,9 @@ local bcline, disass
 -- Active flag, output file handle and dump mode.
 local active, out, dumpmode
 
+-- The zone we are interested in and zone module
+local zone, libzone
+
 ------------------------------------------------------------------------------
 
 local symtabmt = { __index = false }
@@ -542,8 +545,17 @@ local function fmterr(err, info)
   return err
 end
 
+
+local function is_our_zone()
+  if zone then return libzone:get() == zone
+  else return true
+  end
+end
+
 -- Dump trace states.
 local function dump_trace(what, tr, func, pc, otr, oex)
+  if not is_our_zone() then return end
+
   if what == "stop" or (what == "abort" and dumpmode.a) then
     if dumpmode.i then dump_ir(tr, dumpmode.s, dumpmode.r and what == "stop")
     elseif dumpmode.s then dump_snap(tr) end
@@ -553,6 +565,7 @@ local function dump_trace(what, tr, func, pc, otr, oex)
     if dumpmode.H then out:write('<pre class="ljdump">\n') end
     out:write("---- TRACE ", tr, " ", what)
     if otr then out:write(" ", otr, "/", oex) end
+    if zone then out:write(" zone=", libzone:get()) end
     out:write(" ", fmtfunc(func, pc), "\n")
   elseif what == "stop" or what == "abort" then
     out:write("---- TRACE ", tr, " ", what)
@@ -578,6 +591,7 @@ end
 
 -- Dump recorded bytecode.
 local function dump_record(tr, func, pc, depth, callee)
+  if not is_our_zone() then return end
   if depth ~= recdepth then
     recdepth = depth
     recprefix = rep(" .", depth)
@@ -604,6 +618,7 @@ end
 
 -- Dump taken trace exits.
 local function dump_texit(tr, ex, ngpr, nfpr, ...)
+  if not is_our_zone() then return end
   out:write("---- TRACE ", tr, " exit ", ex, "\n")
   if dumpmode.X then
     local regs = {...}
@@ -649,6 +664,13 @@ end
 -- Open the output file and attach dump handlers.
 local function dumpon(opt, outfile)
   if active then dumpoff() end
+
+  if opt then
+    opt = gsub(opt, ':(%w+)', function(z) zone = z; return "" end)
+    if zone then
+      libzone = require('jit.zone')
+    end
+  end
 
   local colormode = os.getenv("COLORTERM") and "A" or "T"
   if opt then
